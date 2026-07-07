@@ -43,11 +43,12 @@ app.register_blueprint(backups_bp)
 app.register_blueprint(usage_bp)
 
 # ponytail: alias for stale templates that call url_for('dashboard')
-app.add_url_rule(
-    "/dashboard",
-    endpoint="dashboard",
-    view_func=dashboard_bp.view_functions["dashboard"],
-)
+if "dashboard" in dashboard_bp.view_functions:
+    app.add_url_rule(
+        "/dashboard",
+        endpoint="dashboard",
+        view_func=dashboard_bp.view_functions["dashboard"],
+    )
 
 
 @app.context_processor
