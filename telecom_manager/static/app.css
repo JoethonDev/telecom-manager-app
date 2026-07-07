@@ -402,7 +402,8 @@ button,input{font:inherit}
 .conn-data{display:flex;align-items:center;gap:8px}
 .conn-data code{font-size:.78rem;background:#f1f5f9;padding:4px 8px;border-radius:6px}
 .uuid{font-size:.75rem;font-family:ui-monospace,monospace;background:#f1f5f9;padding:3px 6px;border-radius:4px}
-.actions{display:flex;gap:6px;flex-wrap:wrap}
+.actions{display:flex;gap:6px;flex-wrap:nowrap;align-items:center}
+.actions form{display:inline-flex;margin:0}
 
 /* ===== Auth ===== */
 .auth-page{min-height:100vh;display:grid;place-items:center;padding:24px}
