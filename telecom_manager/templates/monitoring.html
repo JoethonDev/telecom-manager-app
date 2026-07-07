@@ -2,41 +2,98 @@
 {% block title %}Monitoring — Telecom Manager{% endblock %}
 {% block page_heading %}Server Monitoring{% endblock %}
 {% block body_content %}
-{% set charts = {'CPU': samples|map(attribute='cpu_pct')|list, 'Memory': samples|map(attribute='mem_pct')|list, 'Disk': samples|map(attribute='disk_pct')|list} %}
-<section class="content-grid">
-{% for label, values in charts.items() %}
-  <article class="panel-card">
-    <div class="section-head">
-      <div><span class="eyebrow">Last 24 hours</span><h2>{{ label }}</h2></div>
-      {% if values %}<span class="badge badge-neutral">{{ values|last }}%</span>{% endif %}
-    </div>
-    {% if values %}
-    <p class="muted">Average {{ (values|sum / values|length)|round(1) }}% · Max {{ values|max }}%</p>
-    <div class="chart-wrap">
-      {% for v in values %}<div class="chart-bar {% if v > 80 %}bar-danger{% elif v > 50 %}bar-warn{% else %}bar-ok{% endif %}" style="height:{{ v|round }}px" title="{{ v }}%"></div>{% endfor %}
-    </div>
-    {% else %}
-    <p class="empty-state">No data collected yet. Data appears after the first maintenance run.</p>
-    {% endif %}
-  </article>
-{% endfor %}
+
+{# shared SVG defs (gradients) — hoisted to top of body so all charts can reference them #}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="spark-grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#4f46e5" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="#4f46e5" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+{% set charts = [
+  ('CPU',    'cpu_pct',  samples|map(attribute='cpu_pct')|list),
+  ('Memory', 'mem_pct',  samples|map(attribute='mem_pct')|list),
+  ('Disk',   'disk_pct', samples|map(attribute='disk_pct')|list),
+] %}
+
+<section class="stat-grid" data-live="monitoring">
+  {% for label, key, values in charts %}
+    {% set last  = values|last if values else 0 %}
+    {% set avg   = ((values|sum / values|length)|round(1)) if values else 0 %}
+    {% set mx    = (values|max) if values else 0 %}
+    {% set tone  = 'danger' if last > 80 else ('warn' if last > 50 else 'ok') %}
+    <article class="stat-card" data-tone="{{ tone }}" data-pct="{{ last }}" data-key="{{ key }}">
+      <header class="stat-head">
+        <span class="stat-label">{{ label }}</span>
+        <span class="stat-pill"><span class="live-dot"></span>24h</span>
+      </header>
+      <div class="stat-body">
+        <svg class="gauge" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="gauge-track" cx="60" cy="60" r="52"/>
+          <circle class="gauge-arc"   cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="stat-value">
+          <strong class="count" data-target="{{ last }}">0</strong><span>%</span>
+        </div>
+      </div>
+      <dl class="stat-meta">
+        <div><dt>Avg</dt><dd class="meta-avg" data-target="{{ avg }}">{{ avg }}%</dd></div>
+        <div><dt>Max</dt><dd class="meta-max">{{ mx }}%</dd></div>
+        <div><dt>Samples</dt><dd class="meta-samples">{{ values|length }}</dd></div>
+      </dl>
+      {% if values %}
+      <div class="spark-wrap">
+        <svg class="spark" viewBox="0 0 240 60" preserveAspectRatio="none" data-values="{{ values|join(',') }}" data-key="{{ key }}" aria-label="{{ label }} trend last 24 hours">
+          <path class="spark-area"/>
+          <path class="spark-line"/>
+          <line class="spark-guide" x1="0" y1="0" x2="0" y2="60"/>
+          <circle class="spark-hover-dot" r="4"/>
+          <circle class="spark-dot" r="3"/>
+        </svg>
+        <div class="spark-tip" role="status" aria-live="polite"></div>
+      </div>
+      {% else %}
+      <p class="empty-state">No data yet — appears after the first maintenance run.</p>
+      {% endif %}
+    </article>
+  {% endfor %}
 </section>
 
 <section class="panel-card table-card">
-  <div class="section-head"><div><span class="eyebrow">Last 24 hours</span><h2>Bandwidth by Service</h2></div></div>
+  <div class="section-head">
+    <div><span class="eyebrow">Last 24 hours</span><h2>Bandwidth by Service</h2></div>
+    <div class="bw-legend"><i>Download</i><i>Upload</i></div>
+  </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Service</th><th>Download</th><th>Upload</th><th>Total</th></tr></thead>
+      <thead><tr><th>Service</th><th class="bw-cell">Distribution</th><th>Download</th><th>Upload</th><th>Total</th></tr></thead>
       <tbody>
+      {% set bw_max = (bandwidth|map(attribute='total_in')|list|max)|default(0) %}
       {% for row in bandwidth %}
+        {% set total = row.total_in + row.total_out %}
         <tr>
           <td><strong>{{ row.service }}</strong></td>
-          <td>{% if row.total_in > 1073741824 %}{{ (row.total_in / 1073741824)|round(2) }} GB{% elif row.total_in > 1048576 %}{{ (row.total_in / 1048576)|round(1) }} MB{% else %}{{ (row.total_in / 1024)|round(0)|int }} KB{% endif %}</td>
-          <td>{% if row.total_out > 1073741824 %}{{ (row.total_out / 1073741824)|round(2) }} GB{% elif row.total_out > 1048576 %}{{ (row.total_out / 1048576)|round(1) }} MB{% else %}{{ (row.total_out / 1024)|round(0)|int }} KB{% endif %}</td>
-          <td>{% set total = row.total_in + row.total_out %}{% if total > 1073741824 %}{{ (total / 1073741824)|round(2) }} GB{% elif total > 1048576 %}{{ (total / 1048576)|round(1) }} MB{% else %}{{ (total / 1024)|round(0)|int }} KB{% endif %}</td>
+          <td class="bw-cell">
+            <div class="bw-track">
+              {% if bw_max %}
+              <div class="bw-bar"     style="--w:{{ (row.total_in / bw_max * 100)|round(1) }}%; --i:{{ loop.index0 }}"></div>
+              <div class="bw-bar out" style="--w:{{ (row.total_out / bw_max * 100)|round(1) }}%; --i:{{ loop.index0 }}"></div>
+              {% endif %}
+            </div>
+          </td>
+          <td>{{ bytes_human(row.total_in) }}</td>
+          <td>{{ bytes_human(row.total_out) }}</td>
+          <td><strong>{{ bytes_human(total) }}</strong></td>
         </tr>
       {% else %}
-        <tr><td colspan="4" class="empty">No bandwidth data yet. Data appears after the first maintenance run.</td></tr>
+        <tr><td colspan="5" class="empty">No bandwidth data yet. Data appears after the first maintenance run.</td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -44,21 +101,34 @@
 </section>
 
 <section class="panel-card table-card">
-  <div class="section-head"><div><span class="eyebrow">Last 24 hours</span><h2>Bandwidth by User</h2></div></div>
+  <div class="section-head">
+    <div><span class="eyebrow">Last 24 hours</span><h2>Bandwidth by User</h2></div>
+    <div class="bw-legend"><i>Download</i><i>Upload</i></div>
+  </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Username</th><th>Type</th><th>Download</th><th>Upload</th><th>Total</th></tr></thead>
+      <thead><tr><th>Username</th><th>Type</th><th class="bw-cell">Distribution</th><th>Download</th><th>Upload</th><th>Total</th></tr></thead>
       <tbody>
+      {% set ub_max = (user_bandwidth|map(attribute='total_in')|list|max)|default(0) %}
       {% for row in user_bandwidth %}
+        {% set total = row.total_in + row.total_out %}
         <tr>
           <td><strong>{{ row.username }}</strong></td>
           <td><span class="badge badge-active">{{ row.service_type }}</span></td>
-          <td>{% if row.total_in > 1073741824 %}{{ (row.total_in / 1073741824)|round(2) }} GB{% elif row.total_in > 1048576 %}{{ (row.total_in / 1048576)|round(1) }} MB{% else %}{{ (row.total_in / 1024)|round(0)|int }} KB{% endif %}</td>
-          <td>{% if row.total_out > 1073741824 %}{{ (row.total_out / 1073741824)|round(2) }} GB{% elif row.total_out > 1048576 %}{{ (row.total_out / 1048576)|round(1) }} MB{% else %}{{ (row.total_out / 1024)|round(0)|int }} KB{% endif %}</td>
-          <td>{% set total = row.total_in + row.total_out %}{% if total > 1073741824 %}{{ (total / 1073741824)|round(2) }} GB{% elif total > 1048576 %}{{ (total / 1048576)|round(1) }} MB{% else %}{{ (total / 1024)|round(0)|int }} KB{% endif %}</td>
+          <td class="bw-cell">
+            <div class="bw-track">
+              {% if ub_max %}
+              <div class="bw-bar"     style="--w:{{ (row.total_in / ub_max * 100)|round(1) }}%; --i:{{ loop.index0 }}"></div>
+              <div class="bw-bar out" style="--w:{{ (row.total_out / ub_max * 100)|round(1) }}%; --i:{{ loop.index0 }}"></div>
+              {% endif %}
+            </div>
+          </td>
+          <td>{{ bytes_human(row.total_in) }}</td>
+          <td>{{ bytes_human(row.total_out) }}</td>
+          <td><strong>{{ bytes_human(total) }}</strong></td>
         </tr>
       {% else %}
-        <tr><td colspan="5" class="empty">No per-user bandwidth data yet. Data appears after the first maintenance run.</td></tr>
+        <tr><td colspan="6" class="empty">No per-user bandwidth data yet. Data appears after the first maintenance run.</td></tr>
       {% endfor %}
       </tbody>
     </table>

@@ -17,25 +17,25 @@
 <section class="metric-grid">
   <article class="metric-card">
     <span class="metric-label">SSH Users</span>
-    <strong>{{ active_ssh + expired_ssh }}</strong>
+    <strong class="count" data-target="{{ active_ssh + expired_ssh }}">0</strong>
     <small>{{ active_ssh }} active · {{ expired_ssh }} inactive</small>
   </article>
   <article class="metric-card">
     <span class="metric-label">VMess Users</span>
-    <strong>{{ active_vmess + expired_vmess }}</strong>
+    <strong class="count" data-target="{{ active_vmess + expired_vmess }}">0</strong>
     <small>{{ active_vmess }} active · {{ expired_vmess }} inactive</small>
   </article>
   <article class="metric-card">
     <span class="metric-label">VLESS Users</span>
-    <strong>{{ active_vless + expired_vless }}</strong>
+    <strong class="count" data-target="{{ active_vless + expired_vless }}">0</strong>
     <small>{{ active_vless }} active · {{ expired_vless }} inactive</small>
   </article>
   <article class="metric-card">
     <span class="metric-label">Today's Events</span>
-    <strong>{{ today_usage }}</strong>
+    <strong class="count" data-target="{{ today_usage }}">0</strong>
     <small><a href="{{ url_for('usage.usage') }}">Open activity log</a></small>
     {% if hourly %}
-    <div class="sparkline" aria-label="Hourly activity sparkline">{% for h in hourly %}<span style="height:{{ (h / (hourly|max) * 42)|round }}px"></span>{% endfor %}</div>
+    <div class="sparkline" aria-label="Hourly activity sparkline">{% for h in hourly %}<span style="height:{{ (h / (hourly|max) * 42)|round }}px; animation-delay:{{ loop.index0 * 30 }}ms"></span>{% endfor %}</div>
     {% endif %}
   </article>
 </section>

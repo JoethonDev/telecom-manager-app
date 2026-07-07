@@ -51,11 +51,22 @@ if "dashboard" in dashboard_bp.view_functions:
     )
 
 
+def bytes_human(n):
+    if n is None: return "0 B"
+    n = float(n)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1024:
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1024
+    return f"{n:.1f} PB"
+
+
 @app.context_processor
 def inject_globals():
     from .services.links import vmess_link, vless_link
     return dict(session=session, csrf_token=csrf_token, format_date=format_date,
-                vmess_link=vmess_link, vless_link=vless_link)
+                vmess_link=vmess_link, vless_link=vless_link,
+                bytes_human=bytes_human)
 
 
 @app.before_request
@@ -135,13 +146,14 @@ def init_db():
     MANAGER_DB.parent.mkdir(parents=True, exist_ok=True)
     migrate_schema()
     from .config import ADMIN_USER, ADMIN_PASSWORD_HASH
-    if ADMIN_USER and ADMIN_PASSWORD_HASH:
+    if ADMIN_USER:
         with get_conn() as conn:
             existing = conn.execute("SELECT 1 FROM admins WHERE username = ?", (ADMIN_USER,)).fetchone()
             if not existing:
+                password_hash = ADMIN_PASSWORD_HASH or generate_password_hash("admin")
                 conn.execute(
                     "INSERT INTO admins (username, password_hash, created_at) VALUES (?, ?, ?)",
-                    (ADMIN_USER, ADMIN_PASSWORD_HASH, now_ts()),
+                    (ADMIN_USER, password_hash, now_ts()),
                 )
     clear_settings_cache()
 

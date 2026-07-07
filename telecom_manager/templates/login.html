@@ -1,12 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Login — Telecom Manager{% endblock %}
 {% block body_content %}
-<h1>Welcome back</h1>
-<p class="muted auth-subtitle">Sign in to manage users, services, and connection settings.</p>
+<div class="login-hero">
+  <h1>Welcome back</h1>
+  <p class="muted auth-subtitle">Sign in to manage users, services, and connection settings.</p>
+</div>
 <form method="post" action="{{ url_for('login') }}" class="form-stack auth-form">
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-  <label>Username <input name="username" placeholder="admin" required autocomplete="username"></label>
-  <label>Password <input name="password" type="password" placeholder="Password" required autocomplete="current-password"></label>
-  <button type="submit" class="btn btn-primary btn-block">Login</button>
+  <label>Username
+    <div class="input-wrap">
+      <span class="input-icon" aria-hidden="true">&#128100;</span>
+      <input name="username" placeholder="admin" required autocomplete="username">
+    </div>
+  </label>
+  <label>Password
+    <div class="input-wrap">
+      <span class="input-icon" aria-hidden="true">&#128274;</span>
+      <input name="password" type="password" placeholder="Password" required autocomplete="current-password" id="pw">
+      <button type="button" class="pw-toggle" aria-label="Show password" aria-pressed="false" data-target="pw">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+    </div>
+  </label>
+  <button type="submit" class="btn btn-primary btn-block">
+    <span class="btn-label">Login</span>
+    <span class="btn-spinner" aria-hidden="true"></span>
+  </button>
 </form>
 {% endblock %}

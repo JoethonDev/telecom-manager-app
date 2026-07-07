@@ -26,6 +26,31 @@ def monitoring():
     return render_template("monitoring.html", samples=samples, bandwidth=bandwidth, user_bandwidth=user_bandwidth, now=now)
 
 
+@bp.route("/monitoring/data.json")
+@login_required
+def monitoring_data():
+    now = now_ts()
+    with get_conn() as conn:
+        samples = conn.execute(
+            "SELECT cpu_pct, mem_pct, disk_pct FROM monitoring_samples WHERE sampled_at > ? ORDER BY sampled_at ASC",
+            (now - 86400,),
+        ).fetchall()
+        bandwidth = conn.execute(
+            "SELECT service, SUM(bytes_in) as total_in, SUM(bytes_out) as total_out FROM bandwidth_log WHERE sampled_at > ? GROUP BY service ORDER BY service",
+            (now - 86400,),
+        ).fetchall()
+        user_bandwidth = conn.execute(
+            "SELECT username, service_type, SUM(bytes_in) as total_in, SUM(bytes_out) as total_out FROM user_bandwidth_log WHERE sampled_at > ? GROUP BY username, service_type ORDER BY service_type, username",
+            (now - 86400,),
+        ).fetchall()
+    return jsonify(
+        samples=[dict(s) for s in samples],
+        bandwidth=[dict(b) for b in bandwidth],
+        user_bandwidth=[dict(u) for u in user_bandwidth],
+        ts=now,
+    )
+
+
 @bp.route("/diagnostics")
 @login_required
 def diagnostics():

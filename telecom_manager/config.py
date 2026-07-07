@@ -5,7 +5,7 @@ TELECOM_DEV = os.environ.get("TELECOM_DEV", "") == "1"
 TELECOMCTL_MODE = os.environ.get("TELECOMCTL_MODE", "")  # "mock" or ""
 MANAGER_DB = Path(os.environ.get("MANAGER_DB", "/var/lib/telecom-manager/manager.db"))
 PANEL_PORT = int(os.environ.get("PANEL_PORT", "9000"))
-FLASK_SECRET = os.environ.get("FLASK_SECRET", os.urandom(32).hex())
+FLASK_SECRET = os.environ.get("FLASK_SECRET") or os.urandom(32).hex()
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "")
 
