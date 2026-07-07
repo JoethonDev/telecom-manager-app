@@ -15,7 +15,15 @@ def monitoring():
             "SELECT * FROM monitoring_samples WHERE sampled_at > ? ORDER BY sampled_at ASC",
             (now - 86400,),
         ).fetchall()
-    return render_template("monitoring.html", samples=samples, now=now)
+        bandwidth = conn.execute(
+            "SELECT service, SUM(bytes_in) as total_in, SUM(bytes_out) as total_out FROM bandwidth_log WHERE sampled_at > ? GROUP BY service ORDER BY service",
+            (now - 86400,),
+        ).fetchall()
+        user_bandwidth = conn.execute(
+            "SELECT username, service_type, SUM(bytes_in) as total_in, SUM(bytes_out) as total_out FROM user_bandwidth_log WHERE sampled_at > ? GROUP BY username, service_type ORDER BY service_type, username",
+            (now - 86400,),
+        ).fetchall()
+    return render_template("monitoring.html", samples=samples, bandwidth=bandwidth, user_bandwidth=user_bandwidth, now=now)
 
 
 @bp.route("/diagnostics")

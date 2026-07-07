@@ -53,17 +53,17 @@ def add_ssh():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     expires_at = days_to_expiry(days)
     with get_conn() as conn:
         if conn.execute("SELECT 1 FROM ssh_users WHERE username = ?", (username,)).fetchone():
             flash(f"SSH user already exists: {username}", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     expire_date = datetime.fromtimestamp(expires_at).strftime("%Y-%m-%d")
     result = telecomctl.ssh_add_user(username, password, expire_date)
     if result.returncode != 0:
         flash(f"Failed to create SSH user: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     try:
         with get_conn() as conn:
             conn.execute(
@@ -73,9 +73,9 @@ def add_ssh():
     except Exception as e:
         telecomctl.ssh_delete_user(username)
         flash(f"Failed to save SSH user: {e}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     flash(f"SSH user {username} created", "success")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/ssh/disable", methods=["POST"])
@@ -86,19 +86,19 @@ def disable_ssh():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         if not conn.execute("SELECT 1 FROM ssh_users WHERE username = ?", (username,)).fetchone():
             flash("SSH user not found", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     result = telecomctl.ssh_disable_user(username)
     if result.returncode != 0:
         flash(f"Failed to disable SSH user: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         conn.execute("UPDATE ssh_users SET is_active = 0, updated_at = ? WHERE username = ?", (now_ts(), username))
     flash(f"SSH user {username} disabled", "info")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/ssh/enable", methods=["POST"])
@@ -109,24 +109,24 @@ def enable_ssh():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         user = conn.execute("SELECT * FROM ssh_users WHERE username = ?", (username,)).fetchone()
         if not user:
             flash("SSH user not found", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
         if user["expires_at"] <= now_ts():
             flash("Expired users cannot be enabled; recreate the account with a new expiry", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     expire_date = datetime.fromtimestamp(user["expires_at"]).strftime("%Y-%m-%d")
     result = telecomctl.ssh_enable_user(username, expire_date)
     if result.returncode != 0:
         flash(f"Failed to enable SSH user: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         conn.execute("UPDATE ssh_users SET is_active = 1, updated_at = ? WHERE username = ?", (now_ts(), username))
     flash(f"SSH user {username} enabled", "success")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/ssh/delete", methods=["POST"])
@@ -137,19 +137,19 @@ def delete_ssh():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         if not conn.execute("SELECT 1 FROM ssh_users WHERE username = ?", (username,)).fetchone():
             flash("SSH user not found", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     result = telecomctl.ssh_delete_user(username)
     if result.returncode != 0:
         flash(f"Failed to delete SSH user: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         conn.execute("DELETE FROM ssh_users WHERE username = ?", (username,))
     flash(f"SSH user {username} deleted", "info")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/vmess/add", methods=["POST"])
@@ -163,20 +163,20 @@ def add_vmess():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     expires_at = days_to_expiry(days)
     with get_conn() as conn:
         if conn.execute("SELECT 1 FROM vmess_users WHERE username = ?", (username,)).fetchone():
             flash(f"VMess user already exists: {username}", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     uuid_str = telecomctl.generate_uuid()
     if not uuid_str:
         flash("Failed to generate UUID", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     result = telecomctl.xray_add_vmess(username, uuid_str)
     if result.returncode != 0:
         flash(f"Failed to add Xray client: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     try:
         with get_conn() as conn:
             conn.execute(
@@ -186,9 +186,9 @@ def add_vmess():
     except Exception as e:
         telecomctl.xray_remove_vmess(username)
         flash(f"Failed to save VMess user: {e}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     flash(f"VMess user {username} created", "success")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/vmess/disable", methods=["POST"])
@@ -199,19 +199,19 @@ def disable_vmess():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         if not conn.execute("SELECT 1 FROM vmess_users WHERE username = ?", (username,)).fetchone():
             flash("VMess user not found", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     result = telecomctl.xray_disable_vmess(username)
     if result.returncode != 0:
         flash(f"Failed to disable VMess user: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         conn.execute("UPDATE vmess_users SET is_active = 0, updated_at = ? WHERE username = ?", (now_ts(), username))
     flash(f"VMess user {username} disabled", "info")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/vmess/enable", methods=["POST"])
@@ -222,23 +222,23 @@ def enable_vmess():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         user = conn.execute("SELECT * FROM vmess_users WHERE username = ?", (username,)).fetchone()
         if not user:
             flash("VMess user not found", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
         if user["expires_at"] <= now_ts():
             flash("Expired users cannot be enabled; recreate the account with a new expiry", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     result = telecomctl.xray_enable_vmess(user["username"], user["uuid"])
     if result.returncode != 0:
         flash(f"Failed to enable VMess user: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         conn.execute("UPDATE vmess_users SET is_active = 1, updated_at = ? WHERE username = ?", (now_ts(), username))
     flash(f"VMess user {username} enabled", "success")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/vmess/delete", methods=["POST"])
@@ -249,19 +249,19 @@ def delete_vmess():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         if not conn.execute("SELECT 1 FROM vmess_users WHERE username = ?", (username,)).fetchone():
             flash("VMess user not found", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     result = telecomctl.xray_remove_vmess(username)
     if result.returncode != 0:
         flash(f"Failed to remove VMess user: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         conn.execute("DELETE FROM vmess_users WHERE username = ?", (username,))
     flash(f"VMess user {username} deleted", "info")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/vless/add", methods=["POST"])
@@ -275,20 +275,20 @@ def add_vless():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     expires_at = days_to_expiry(days)
     with get_conn() as conn:
         if conn.execute("SELECT 1 FROM vless_users WHERE username = ?", (username,)).fetchone():
             flash(f"VLESS user already exists: {username}", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     uuid_str = telecomctl.generate_uuid()
     if not uuid_str:
         flash("Failed to generate UUID", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     result = telecomctl.xray_add_vless(username, uuid_str)
     if result.returncode != 0:
         flash(f"Failed to add Xray client: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     try:
         with get_conn() as conn:
             conn.execute(
@@ -298,9 +298,9 @@ def add_vless():
     except Exception as e:
         telecomctl.xray_remove_vless(username)
         flash(f"Failed to save VLESS user: {e}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     flash(f"VLESS user {username} created", "success")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/vless/disable", methods=["POST"])
@@ -311,19 +311,19 @@ def disable_vless():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         if not conn.execute("SELECT 1 FROM vless_users WHERE username = ?", (username,)).fetchone():
             flash("VLESS user not found", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     result = telecomctl.xray_disable_vless(username)
     if result.returncode != 0:
         flash(f"Failed to disable VLESS user: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         conn.execute("UPDATE vless_users SET is_active = 0, updated_at = ? WHERE username = ?", (now_ts(), username))
     flash(f"VLESS user {username} disabled", "info")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/vless/enable", methods=["POST"])
@@ -334,23 +334,23 @@ def enable_vless():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         user = conn.execute("SELECT * FROM vless_users WHERE username = ?", (username,)).fetchone()
         if not user:
             flash("VLESS user not found", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
         if user["expires_at"] <= now_ts():
             flash("Expired users cannot be enabled; recreate the account with a new expiry", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     result = telecomctl.xray_enable_vless(user["username"], user["uuid"])
     if result.returncode != 0:
         flash(f"Failed to enable VLESS user: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         conn.execute("UPDATE vless_users SET is_active = 1, updated_at = ? WHERE username = ?", (now_ts(), username))
     flash(f"VLESS user {username} enabled", "success")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))
 
 
 @bp.route("/vless/delete", methods=["POST"])
@@ -361,16 +361,16 @@ def delete_vless():
         validate_username(username)
     except ValueError as e:
         flash(str(e), "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         if not conn.execute("SELECT 1 FROM vless_users WHERE username = ?", (username,)).fetchone():
             flash("VLESS user not found", "error")
-            return redirect(url_for("users"))
+            return redirect(url_for("users.users"))
     result = telecomctl.xray_remove_vless(username)
     if result.returncode != 0:
         flash(f"Failed to remove VLESS user: {result.stderr}", "error")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users"))
     with get_conn() as conn:
         conn.execute("DELETE FROM vless_users WHERE username = ?", (username,))
     flash(f"VLESS user {username} deleted", "info")
-    return redirect(url_for("users"))
+    return redirect(url_for("users.users"))

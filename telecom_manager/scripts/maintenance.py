@@ -158,6 +158,23 @@ def collect_monitoring_samples():
         conn.execute("DELETE FROM usage_log WHERE logged_at < ?", (now_ts() - 86400 * 90,))
 
 
+def collect_bandwidth():
+    ts = now_ts()
+    with get_conn() as conn:
+        for service, bytes_in, bytes_out in telecomctl.tele_bandwidth():
+            conn.execute(
+                "INSERT INTO bandwidth_log (service, bytes_in, bytes_out, sampled_at) VALUES (?, ?, ?, ?)",
+                (service, bytes_in, bytes_out, ts),
+            )
+        for username, service_type, bytes_in, bytes_out in telecomctl.tele_bandwidth_users():
+            conn.execute(
+                "INSERT INTO user_bandwidth_log (username, service_type, bytes_in, bytes_out, sampled_at) VALUES (?, ?, ?, ?, ?)",
+                (username, service_type, bytes_in, bytes_out, ts),
+            )
+        conn.execute("DELETE FROM bandwidth_log WHERE sampled_at < ?", (ts - 86400 * 90,))
+        conn.execute("DELETE FROM user_bandwidth_log WHERE sampled_at < ?", (ts - 86400 * 90,))
+
+
 def backup_database():
     bk_dir = MANAGER_DB.parent / "backups"
     bk_dir.mkdir(parents=True, exist_ok=True)
@@ -199,5 +216,6 @@ if __name__ == "__main__":
     collect_usage_logs()
     collect_xray_logs()
     collect_monitoring_samples()
+    collect_bandwidth()
     backup_database()
     reconcile_users()

@@ -32,7 +32,9 @@ def cmd_create_admin():
     username = os.environ.get("ADMIN_USER", "admin")
     password = os.environ.get("ADMIN_PASSWORD", "")
 
-    if not password:
+    if password:
+        print(f"Using ADMIN_PASSWORD env var (set to {len(password)} chars)")
+    else:
         import getpass
         password = getpass.getpass("Admin password: ")
 
@@ -53,6 +55,43 @@ def cmd_create_admin():
             (username, generate_password_hash(password), now_ts()),
         )
     print(f"Admin {username} created")
+
+
+def cmd_list_admins():
+    from telecom_manager.db import get_conn, format_date
+    with get_conn() as conn:
+        admins = conn.execute("SELECT id, username, created_at FROM admins ORDER BY id").fetchall()
+    if not admins:
+        print("No admins found")
+        return
+    for a in admins:
+        print(f"id={a['id']} username={a['username']} created_at={format_date(a['created_at'])}")
+
+
+def cmd_reset_password():
+    from telecom_manager.db import get_conn, now_ts
+    from werkzeug.security import generate_password_hash
+    import getpass
+
+    username = os.environ.get("ADMIN_USER", "admin")
+    password = getpass.getpass("New admin password: ")
+    if not password:
+        print("Password cannot be empty", file=sys.stderr)
+        sys.exit(1)
+
+    cmd_migrate()
+    pw_hash = generate_password_hash(password)
+    with get_conn() as conn:
+        existing = conn.execute("SELECT 1 FROM admins WHERE username = ?", (username,)).fetchone()
+        if existing:
+            conn.execute("UPDATE admins SET password_hash = ? WHERE username = ?", (pw_hash, username))
+            print(f"Password reset for {username}")
+        else:
+            conn.execute(
+                "INSERT INTO admins (username, password_hash, created_at) VALUES (?, ?, ?)",
+                (username, pw_hash, now_ts()),
+            )
+            print(f"Admin {username} created")
 
 
 def cmd_expire_users():
@@ -114,7 +153,7 @@ def cmd_health_check():
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: manage.py <migrate|runserver|create-admin|expire-users|health-check>")
+        print("Usage: manage.py <migrate|runserver|create-admin|expire-users|health-check|list-admins|reset-password>")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -124,6 +163,8 @@ if __name__ == "__main__":
         "create-admin": cmd_create_admin,
         "expire-users": cmd_expire_users,
         "health-check": cmd_health_check,
+        "list-admins": cmd_list_admins,
+        "reset-password": cmd_reset_password,
     }
     fn = commands.get(command)
     if not fn:

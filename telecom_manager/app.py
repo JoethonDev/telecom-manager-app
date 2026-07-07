@@ -42,6 +42,13 @@ app.register_blueprint(admins_bp)
 app.register_blueprint(backups_bp)
 app.register_blueprint(usage_bp)
 
+# ponytail: alias for stale templates that call url_for('dashboard')
+app.add_url_rule(
+    "/dashboard",
+    endpoint="dashboard",
+    view_func=dashboard_bp.view_functions["dashboard"],
+)
+
 
 @app.context_processor
 def inject_globals():
@@ -93,9 +100,9 @@ def login():
             session["username"] = admin["username"]
             session.permanent = True
             note_login_attempt(key, True)
-            next_url = request.args.get("next", url_for("dashboard"))
+            next_url = request.args.get("next", url_for("dashboard.dashboard"))
             if not next_url.startswith("/") or next_url.startswith("//"):
-                next_url = url_for("dashboard")
+                next_url = url_for("dashboard.dashboard")
             return redirect(next_url)
         note_login_attempt(key, False)
         flash("Invalid username or password", "error")
@@ -112,7 +119,7 @@ def logout():
 
 @app.route("/")
 def index():
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("dashboard.dashboard"))
 
 
 @app.errorhandler(Exception)
@@ -154,7 +161,11 @@ def migrate_schema():
         migrations.append("CREATE TABLE IF NOT EXISTS monitoring_samples (id INTEGER PRIMARY KEY AUTOINCREMENT, cpu_pct REAL NOT NULL DEFAULT 0, mem_pct REAL NOT NULL DEFAULT 0, disk_pct REAL NOT NULL DEFAULT 0, sampled_at INTEGER NOT NULL)")
     if ver < 5:
         migrations.append("CREATE TABLE IF NOT EXISTS vless_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, uuid TEXT UNIQUE NOT NULL, sni TEXT NOT NULL, expires_at INTEGER NOT NULL, is_active INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
-    target = 5
+    if ver < 6:
+        migrations.append("CREATE TABLE IF NOT EXISTS bandwidth_log (id INTEGER PRIMARY KEY AUTOINCREMENT, service TEXT NOT NULL, bytes_in INTEGER NOT NULL DEFAULT 0, bytes_out INTEGER NOT NULL DEFAULT 0, sampled_at INTEGER NOT NULL)")
+    if ver < 7:
+        migrations.append("CREATE TABLE IF NOT EXISTS user_bandwidth_log (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, service_type TEXT NOT NULL, bytes_in INTEGER NOT NULL DEFAULT 0, bytes_out INTEGER NOT NULL DEFAULT 0, sampled_at INTEGER NOT NULL)")
+    target = 7
     if migrations:
         with get_conn() as conn:
             for sql in migrations:

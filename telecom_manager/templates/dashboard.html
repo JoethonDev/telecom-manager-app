@@ -33,7 +33,7 @@
   <article class="metric-card">
     <span class="metric-label">Today's Events</span>
     <strong>{{ today_usage }}</strong>
-    <small><a href="{{ url_for('usage') }}">Open activity log</a></small>
+    <small><a href="{{ url_for('usage.usage') }}">Open activity log</a></small>
     {% if hourly %}
     <div class="sparkline" aria-label="Hourly activity sparkline">{% for h in hourly %}<span style="height:{{ (h / (hourly|max) * 42)|round }}px"></span>{% endfor %}</div>
     {% endif %}
@@ -47,7 +47,7 @@
         <span class="eyebrow">Quick action</span>
         <h2>Managed accounts</h2>
       </div>
-      <a class="btn btn-secondary" href="{{ url_for('users') }}">Open Users</a>
+      <a class="btn btn-secondary" href="{{ url_for('users.users') }}">Open Users</a>
     </div>
     <p class="muted">Create disposable SSH, VMess, and VLESS users with automatic expiry and safe disable/delete actions.</p>
   </article>

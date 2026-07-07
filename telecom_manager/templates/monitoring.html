@@ -21,4 +21,47 @@
   </article>
 {% endfor %}
 </section>
+
+<section class="panel-card table-card">
+  <div class="section-head"><div><span class="eyebrow">Last 24 hours</span><h2>Bandwidth by Service</h2></div></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Service</th><th>Download</th><th>Upload</th><th>Total</th></tr></thead>
+      <tbody>
+      {% for row in bandwidth %}
+        <tr>
+          <td><strong>{{ row.service }}</strong></td>
+          <td>{% if row.total_in > 1073741824 %}{{ (row.total_in / 1073741824)|round(2) }} GB{% elif row.total_in > 1048576 %}{{ (row.total_in / 1048576)|round(1) }} MB{% else %}{{ (row.total_in / 1024)|round(0)|int }} KB{% endif %}</td>
+          <td>{% if row.total_out > 1073741824 %}{{ (row.total_out / 1073741824)|round(2) }} GB{% elif row.total_out > 1048576 %}{{ (row.total_out / 1048576)|round(1) }} MB{% else %}{{ (row.total_out / 1024)|round(0)|int }} KB{% endif %}</td>
+          <td>{% set total = row.total_in + row.total_out %}{% if total > 1073741824 %}{{ (total / 1073741824)|round(2) }} GB{% elif total > 1048576 %}{{ (total / 1048576)|round(1) }} MB{% else %}{{ (total / 1024)|round(0)|int }} KB{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="empty">No bandwidth data yet. Data appears after the first maintenance run.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel-card table-card">
+  <div class="section-head"><div><span class="eyebrow">Last 24 hours</span><h2>Bandwidth by User</h2></div></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Username</th><th>Type</th><th>Download</th><th>Upload</th><th>Total</th></tr></thead>
+      <tbody>
+      {% for row in user_bandwidth %}
+        <tr>
+          <td><strong>{{ row.username }}</strong></td>
+          <td><span class="badge badge-active">{{ row.service_type }}</span></td>
+          <td>{% if row.total_in > 1073741824 %}{{ (row.total_in / 1073741824)|round(2) }} GB{% elif row.total_in > 1048576 %}{{ (row.total_in / 1048576)|round(1) }} MB{% else %}{{ (row.total_in / 1024)|round(0)|int }} KB{% endif %}</td>
+          <td>{% if row.total_out > 1073741824 %}{{ (row.total_out / 1073741824)|round(2) }} GB{% elif row.total_out > 1048576 %}{{ (row.total_out / 1048576)|round(1) }} MB{% else %}{{ (row.total_out / 1024)|round(0)|int }} KB{% endif %}</td>
+          <td>{% set total = row.total_in + row.total_out %}{% if total > 1073741824 %}{{ (total / 1073741824)|round(2) }} GB{% elif total > 1048576 %}{{ (total / 1048576)|round(1) }} MB{% else %}{{ (total / 1024)|round(0)|int }} KB{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty">No per-user bandwidth data yet. Data appears after the first maintenance run.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
 {% endblock %}

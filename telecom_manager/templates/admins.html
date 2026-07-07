@@ -5,7 +5,7 @@
 <section class="content-grid two-col align-start">
   <article class="panel-card">
     <div class="section-head"><div><span class="eyebrow">Access</span><h2>Add administrator</h2></div></div>
-    <form method="post" action="{{ url_for('admins') }}" class="form-stack">
+    <form method="post" action="{{ url_for('admins.admins') }}" class="form-stack">
       <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="add">
       <label>Username <input name="username" placeholder="admin2" required></label>
@@ -26,7 +26,7 @@
             <td>{{ format_date(admin.created_at) }}</td>
             <td>
               {% if admin.id != session.user_id %}
-              <form method="post" action="{{ url_for('admins') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete"><input type="hidden" name="admin_id" value="{{ admin.id }}"><button type="submit" class="btn-sm btn-danger" onclick="return confirm('Delete admin {{ admin.username }}?')">Delete</button></form>
+              <form method="post" action="{{ url_for('admins.admins') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete"><input type="hidden" name="admin_id" value="{{ admin.id }}"><button type="submit" class="btn-sm btn-danger" onclick="return confirm('Delete admin {{ admin.username }}?')">Delete</button></form>
               {% endif %}
             </td>
           </tr>

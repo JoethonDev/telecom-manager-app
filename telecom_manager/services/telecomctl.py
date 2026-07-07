@@ -52,6 +52,14 @@ def _mock_run(cmd_args):
         return MockResult("")
     if "xray add" in cmd or "xray remove" in cmd or "xray enable" in cmd or "xray disable" in cmd:
         return MockResult("ok")
+    if "port set" in cmd:
+        return MockResult("ok")
+    if "nginx reconfigure" in cmd:
+        return MockResult("nginx reconfigured for domain 'test'")
+    if "bandwidth users" in cmd:
+        return MockResult("client_001:vmess:512000:1024000\nclient_002:vless:256000:512000\ntest_ssh:ssh:128000:256000")
+    if "bandwidth" in cmd:
+        return MockResult("xray:1024000:2048000\nssh:512000:1024000")
 
     return MockResult("", "unknown command", 1)
 
@@ -145,6 +153,43 @@ def tele_xray_test_config():
 
 def tele_xray_restart():
     return _run(["xray", "restart"])
+
+
+def nginx_reconfigure(domain=""):
+    args = ["nginx", "reconfigure"]
+    if domain:
+        args.extend(["--domain", domain])
+    return _run(args)
+
+
+def port_set(service, port):
+    return _run(["port", "set", "--service", service, "--port", str(port)])
+
+
+def tele_bandwidth_users():
+    """Get per-user bandwidth counters. Returns list of (username, service_type, bytes_in, bytes_out)."""
+    result = _run(["bandwidth", "users"])
+    if result.returncode != 0:
+        return []
+    rows = []
+    for line in result.stdout.strip().splitlines():
+        parts = line.strip().split(":")
+        if len(parts) == 4:
+            rows.append((parts[0], parts[1], int(parts[2]), int(parts[3])))
+    return rows
+
+
+def tele_bandwidth():
+    """Get bandwidth counters from telecomctl. Returns list of (service, bytes_in, bytes_out)."""
+    result = _run(["bandwidth"])
+    if result.returncode != 0:
+        return []
+    rows = []
+    for line in result.stdout.strip().splitlines():
+        parts = line.strip().split(":")
+        if len(parts) == 3:
+            rows.append((parts[0], int(parts[1]), int(parts[2])))
+    return rows
 
 
 def generate_uuid():

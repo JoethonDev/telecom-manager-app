@@ -51,4 +51,4 @@ def restart_services():
         flash("Xray restarted", "success")
     else:
         flash(f"Failed to restart: {result.stderr}", "error")
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("dashboard.dashboard"))
