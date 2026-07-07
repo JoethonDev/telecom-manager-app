@@ -320,8 +320,233 @@ document.addEventListener('DOMContentLoaded',function(){
     });
   }
 
+  /* ---------- table enhance (search / filter / pagination) ---------- */
+  function enhanceTables(){
+    document.querySelectorAll('[data-enhance]').forEach(function(card){
+      var cfg = readConfig(card);
+      if(!cfg.table) return;
+      initTable(card, cfg);
+    });
+  }
+
+  function readConfig(card){
+    var table = card.querySelector('table');
+    if(!table) return {};
+    return {
+      card: card,
+      table: table,
+      tbody: table.tBodies[0],
+      searchIn: card.getAttribute('data-search-in') || '',
+      filterCol: card.getAttribute('data-filter-col'),
+      pageSizes: (card.getAttribute('data-page-sizes') || '10,25,50,100').split(',').map(Number),
+      defaultPage: parseInt(card.getAttribute('data-page-size') || '10', 10),
+    };
+  }
+
+  function initTable(card, cfg){
+    var rows = Array.prototype.slice.call(cfg.tbody.rows);
+    rows.forEach(function(r){
+      r._text = (r.textContent || '').toLowerCase();
+      r._filterVal = cfg.filterCol != null
+        ? (r.cells[cfg.filterCol] && r.cells[cfg.filterCol].textContent.trim().toLowerCase())
+        : null;
+    });
+    var state = { q: '', filter: 'all', page: 1, size: cfg.defaultPage };
+    var toolRow = document.createElement('div');
+    toolRow.className = 'table-toolbar';
+    toolRow.innerHTML =
+      '<div class="table-search"><span class="search-icon" aria-hidden="true">' + searchSvg() + '</span>' +
+      '<input type="search" placeholder="Search\u2026" aria-label="Search"></div>' +
+      '<div class="filter-chips" role="tablist"></div>' +
+      '<label class="page-size-select">Rows ' +
+      '<select>' + cfg.pageSizes.map(function(n){ return '<option value="'+n+'"'+(n===state.size?' selected':'')+'>'+n+'</option>'; }).join('') +
+      '</select></label>';
+
+    // insert after the section-head (or at the top of the card)
+    var head = card.querySelector(':scope > .section-head');
+    if(head && head.nextSibling) card.insertBefore(toolRow, head.nextSibling);
+    else if(head) card.appendChild(toolRow);
+    else card.insertBefore(toolRow, card.firstChild);
+
+    var pager = document.createElement('div');
+    pager.className = 'table-pager';
+    card.appendChild(pager);
+
+    var search = toolRow.querySelector('input');
+    var chips  = toolRow.querySelector('.filter-chips');
+    var size   = toolRow.querySelector('select');
+
+    // build filter chips from data-filter-values (comma-sep) or auto-derive from rows
+    var filterValues = (card.getAttribute('data-filter-values') || '').trim();
+    var values = filterValues ? filterValues.split('|').map(function(v){ return v.split(':'); })
+                              : deriveFilters(rows, cfg.filterCol);
+    buildChips(chips, values, state, function(){ apply(); });
+
+    size.addEventListener('change', function(){
+      state.size = parseInt(size.value, 10);
+      state.page = 1;
+      apply();
+    });
+
+    var t;
+    search.addEventListener('input', function(){
+      search.parentNode.classList.toggle('is-searching', !!search.value);
+      clearTimeout(t);
+      t = setTimeout(function(){
+        state.q = (search.value || '').toLowerCase();
+        state.page = 1;
+        apply();
+      }, 100);
+    });
+
+    function apply(){
+      var matched = rows.filter(function(r){
+        var ok = !state.q || (r._text || '').indexOf(state.q) !== -1;
+        if(ok && state.filter !== 'all' && cfg.filterCol != null){
+          ok = (r._filterVal || '').indexOf(state.filter) !== -1;
+        }
+        return ok;
+      });
+      var total = matched.length;
+      var pages = Math.max(1, Math.ceil(total / state.size));
+      if(state.page > pages) state.page = pages;
+      var start = (state.page - 1) * state.size;
+      var end   = start + state.size;
+
+      rows.forEach(function(r){ r.classList.add('is-hidden'); });
+      matched.slice(start, end).forEach(function(r){ r.classList.remove('is-hidden'); });
+
+      // update chip counts
+      updateChipCounts(chips, rows, state, cfg);
+
+      // pager
+      renderPager(pager, state, pages, total, function(p){ state.page = p; apply(); });
+
+      // empty state if nothing matched
+      var existingEmpty = card.querySelector('.table-empty');
+      if(total === 0){
+        if(!existingEmpty){
+          var e = document.createElement('div');
+          e.className = 'empty table-empty';
+          e.textContent = 'No matching rows';
+          cfg.tbody.parentNode.appendChild(e);
+        }
+      } else if(existingEmpty){ existingEmpty.parentNode.removeChild(existingEmpty); }
+    }
+    apply();
+  }
+
+  function deriveFilters(rows, col){
+    if(col == null) return [['all','All']];
+    var set = {};
+    rows.forEach(function(r){
+      var v = (r.cells[col] && r.cells[col].textContent.trim().toLowerCase()) || '';
+      if(v) set[v] = (set[v] || 0) + 1;
+    });
+    var out = [['all', 'All', rows.length]];
+    Object.keys(set).sort().forEach(function(k){
+      var label = k.charAt(0).toUpperCase() + k.slice(1);
+      out.push([k, label, set[k]]);
+    });
+    return out;
+  }
+
+  function buildChips(host, values, state, onChange){
+    host.innerHTML = '';
+    values.forEach(function(v){
+      var key = v[0], label = v[1], count = v[2];
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip';
+      b.setAttribute('aria-pressed', key === state.filter ? 'true' : 'false');
+      b.dataset.filter = key;
+      b.innerHTML = label + ' <span class="chip-count">' + (count != null ? count : '') + '</span>';
+      b.addEventListener('click', function(){
+        state.filter = key;
+        host.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c.dataset.filter === key ? 'true' : 'false'); });
+        onChange();
+      });
+      host.appendChild(b);
+    });
+  }
+
+  function updateChipCounts(host, rows, state, cfg){
+    var counts = { all: rows.length };
+    if(cfg.filterCol != null){
+      rows.forEach(function(r){
+        if(state.q && (r._text || '').indexOf(state.q) === -1) return;
+        var k = r._filterVal || '';
+        counts[k] = (counts[k] || 0) + 1;
+      });
+    } else {
+      counts = { all: rows.filter(function(r){ return !state.q || (r._text || '').indexOf(state.q) !== -1; }).length };
+    }
+    host.querySelectorAll('.chip').forEach(function(c){
+      var n = counts[c.dataset.filter] || 0;
+      var span = c.querySelector('.chip-count');
+      if(span) span.textContent = n;
+    });
+  }
+
+  function renderPager(host, state, pages, total, onPick){
+    host.innerHTML = '';
+    if(total === 0){
+      host.innerHTML = '<span class="pager-info">0 rows</span><div class="pager-controls"></div>';
+      return;
+    }
+    var start = (state.page - 1) * state.size + 1;
+    var end   = Math.min(start + state.size - 1, total);
+    var info  = document.createElement('span');
+    info.className = 'pager-info';
+    info.textContent = start + '\u2013' + end + ' of ' + total;
+    var ctrls = document.createElement('div');
+    ctrls.className = 'pager-controls';
+    function btn(label, page, opts){
+      opts = opts || {};
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pager-btn';
+      b.textContent = label;
+      if(opts.disabled){ b.disabled = true; return b; }
+      if(opts.current){ b.setAttribute('aria-current', 'page'); }
+      b.addEventListener('click', function(){ onPick(page); });
+      return b;
+    }
+    ctrls.appendChild(btn('\u2039', state.page - 1, {disabled: state.page <= 1}));
+    // page list with ellipsis
+    var pageList = pagesList(state.page, pages);
+    pageList.forEach(function(p){
+      if(p === '\u2026'){
+        var s = document.createElement('span'); s.className = 'pager-ellipsis'; s.textContent = '\u2026';
+        ctrls.appendChild(s);
+      } else {
+        ctrls.appendChild(btn(String(p), p, {current: p === state.page}));
+      }
+    });
+    ctrls.appendChild(btn('\u203a', state.page + 1, {disabled: state.page >= pages}));
+    host.appendChild(info);
+    host.appendChild(ctrls);
+  }
+
+  function pagesList(current, total){
+    if(total <= 7) return Array.from({length: total}, function(_,i){ return i+1; });
+    var out = [1];
+    if(current > 4) out.push('\u2026');
+    var from = Math.max(2, current - 1);
+    var to   = Math.min(total - 1, current + 1);
+    for(var i=from; i<=to; i++) out.push(i);
+    if(current < total - 3) out.push('\u2026');
+    out.push(total);
+    return out;
+  }
+
+  function searchSvg(){
+    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
+  }
+
   /* ---------- run ---------- */
   runGauges();
   runSparks();
   runCounters();
+  enhanceTables();
 });

@@ -3,7 +3,7 @@
 {% block page_heading %}Database Backups{% endblock %}
 {% block body_content %}
 <section class="notice-card"><strong>Restore policy</strong><p>Daily backups are retained for seven days. Restore is intentionally CLI-only while the panel is stopped.</p></section>
-<section class="panel-card table-card">
+<section class="panel-card table-card" data-enhance data-page-size="10" data-page-sizes="5,10,25,50">
   <div class="section-head"><div><span class="eyebrow">Backup files</span><h2>Available backups</h2></div></div>
   <div class="table-wrap">
     <table>

@@ -6,7 +6,7 @@
   <article class="metric-card compact"><span class="metric-label">Today</span><strong>{{ daily|sum(attribute='cnt') }}</strong><small>total events</small></article>
   {% for d in daily %}<article class="metric-card compact"><span class="metric-label">{{ d.type }}</span><strong>{{ d.cnt }}</strong><small>today</small></article>{% endfor %}
 </section>
-<section class="panel-card table-card">
+<section class="panel-card table-card" data-enhance data-filter-col="2" data-page-size="15" data-page-sizes="10,15,25,50,100">
   <div class="section-head"><div><span class="eyebrow">Recent events</span><h2>Activity log</h2></div><a href="{{ url_for('usage.usage_export') }}" class="btn btn-secondary">Export CSV</a></div>
   <div class="table-wrap">
     <table>

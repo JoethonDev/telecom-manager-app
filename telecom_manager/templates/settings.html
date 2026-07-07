@@ -2,7 +2,7 @@
 {% block title %}Settings — Telecom Manager{% endblock %}
 {% block page_heading %}Settings{% endblock %}
 {% block body_content %}
-<form method="post">
+<form method="post" class="form-sections">
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
   <section class="panel-card narrow-card">
     <div class="section-head"><div><span class="eyebrow">Connection metadata</span><h2>Public connection values</h2></div></div>
@@ -20,6 +20,8 @@
       <label>SSH Compat <input name="ssh_compat_port" value="{{ settings.ssh_compat_port }}" placeholder="2222" type="number" min="1" max="65535"></label>
     </div>
   </section>
-  <button type="submit" class="btn btn-primary">Save settings</button>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Save settings</button>
+  </div>
 </form>
 {% endblock %}
