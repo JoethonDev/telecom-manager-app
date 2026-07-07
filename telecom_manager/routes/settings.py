@@ -16,14 +16,18 @@ def settings():
     cfg = get_effective_settings()
     if request.method == "POST":
         connection_domain = request.form.get("connection_domain", "").strip()
+        panel_domain = request.form.get("panel_domain", "").strip()
         public_ip = request.form.get("public_ip", "").strip()
         try:
             validate_domain(connection_domain)
+            validate_domain(panel_domain)
             validate_public_ip(public_ip)
         except (ValueError, TypeError) as e:
             flash(str(e), "error")
             return redirect(url_for("settings.settings"))
         pairs = [("connection_domain", connection_domain), ("public_ip", public_ip)]
+        if panel_domain:
+            pairs.append(("panel_domain", panel_domain))
         for key in PORT_KEYS:
             val = request.form.get(key, "").strip()
             if val:
@@ -50,7 +54,10 @@ def settings():
                     changed_ports.append((key, value))
         clear_settings_cache()
         domain_changed = connection_domain != cfg.get("connection_domain", "")
-        if domain_changed and connection_domain:
+        panel_domain_changed = panel_domain != cfg.get("panel_domain", "")
+        if panel_domain_changed and panel_domain:
+            telecomctl.nginx_reconfigure(panel_domain)
+        elif domain_changed and connection_domain:
             telecomctl.nginx_reconfigure(connection_domain)
         if changed_ports:
             new_cfg = get_effective_settings()
