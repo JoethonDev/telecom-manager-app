@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Diagnostics — Telecom Manager{% endblock %}
+{% block page_heading %}Server Diagnostics{% endblock %}
+{% block body_content %}
+<section class="panel-card">
+  <div class="section-head"><div><span class="eyebrow">Live data</span><h2>System diagnostics</h2></div></div>
+  <pre class="diagnostics-output">{{ output }}</pre>
+</section>
+{% endblock %}

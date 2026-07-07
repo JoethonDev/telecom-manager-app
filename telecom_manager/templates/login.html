@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Login — Telecom Manager{% endblock %}
+{% block body_content %}
+<h1>Welcome back</h1>
+<p class="muted auth-subtitle">Sign in to manage users, services, and connection settings.</p>
+<form method="post" action="{{ url_for('login') }}" class="form-stack auth-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <label>Username <input name="username" placeholder="admin" required autocomplete="username"></label>
+  <label>Password <input name="password" type="password" placeholder="Password" required autocomplete="current-password"></label>
+  <button type="submit" class="btn btn-primary btn-block">Login</button>
+</form>
+{% endblock %}

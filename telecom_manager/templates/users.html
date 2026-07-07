@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Users — Telecom Manager{% endblock %}
+{% block page_heading %}Managed Users{% endblock %}
+{% block body_content %}
+<section class="metric-grid">
+  <article class="metric-card compact"><span class="metric-label">SSH Users</span><strong>{{ ssh_users|length }}</strong><small>{{ active_ssh }} active</small></article>
+  <article class="metric-card compact"><span class="metric-label">VMess Users</span><strong>{{ vmess_users|length }}</strong><small>{{ active_vmess }} active</small></article>
+  <article class="metric-card compact"><span class="metric-label">VLESS Users</span><strong>{{ vless_users|length }}</strong><small>{{ active_vless }} active</small></article>
+</section>
+
+<section class="content-grid three-col">
+  <article class="panel-card">
+    <div class="section-head"><div><span class="eyebrow">New account</span><h2>Add SSH user</h2></div></div>
+    <form method="post" action="{{ url_for('users.add_ssh') }}" class="form-stack">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Username <input name="username" placeholder="client_001" required></label>
+      <label>Password <input name="password" type="password" placeholder="User password" required></label>
+      <label>Validity in days <input name="days" type="number" min="1" placeholder="30" required></label>
+      <button type="submit" class="btn btn-primary btn-block">Create SSH user</button>
+    </form>
+  </article>
+  <article class="panel-card">
+    <div class="section-head"><div><span class="eyebrow">New account</span><h2>Add VMess user</h2></div></div>
+    <form method="post" action="{{ url_for('users.add_vmess') }}" class="form-stack">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Username <input name="username" placeholder="client_vmess_001" required></label>
+      <label>Validity in days <input name="days" type="number" min="1" placeholder="30" required></label>
+      <button type="submit" class="btn btn-primary btn-block">Create VMess user</button>
+    </form>
+  </article>
+  <article class="panel-card">
+    <div class="section-head"><div><span class="eyebrow">New account</span><h2>Add VLESS user</h2></div></div>
+    <form method="post" action="{{ url_for('users.add_vless') }}" class="form-stack">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Username <input name="username" placeholder="client_vless_001" required></label>
+      <label>Validity in days <input name="days" type="number" min="1" placeholder="30" required></label>
+      <button type="submit" class="btn btn-primary btn-block">Create VLESS user</button>
+    </form>
+  </article>
+</section>
+
+<section class="panel-card table-card">
+  <div class="section-head"><div><span class="eyebrow">Accounts</span><h2>SSH Users</h2></div></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Username</th><th>Status</th><th>Expires</th><th>Connection</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for user in ssh_users %}
+        <tr>
+          <td><strong>{{ user.username }}</strong></td>
+          <td>{% if user.is_active %}<span class="badge badge-active">Active</span>{% else %}<span class="badge badge-inactive">Inactive</span>{% endif %}</td>
+          <td>{{ format_date(user.expires_at) }}</td>
+          <td class="conn-data"><code>{{ domain }}:{{ stunnel_port }}</code> <button class="btn-sm copy-btn" data-copy="{{ domain }}:{{ stunnel_port }}@{{ user.username }}">Copy</button></td>
+          <td class="actions">
+            {% if user.is_active %}
+            <form method="post" action="{{ url_for('users.disable_ssh') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-warn" onclick="return confirm('Disable {{ user.username }}?')">Disable</button></form>
+            {% else %}
+            <form method="post" action="{{ url_for('users.enable_ssh') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm">Enable</button></form>
+            {% endif %}
+            <form method="post" action="{{ url_for('users.delete_ssh') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-danger" onclick="return confirm('Delete {{ user.username }}?')">Delete</button></form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty">No SSH users yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel-card table-card">
+  <div class="section-head"><div><span class="eyebrow">Accounts</span><h2>VMess Users</h2></div></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Username</th><th>Status</th><th>UUID</th><th>Expires</th><th>Link</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for user in vmess_users %}
+        <tr>
+          <td><strong>{{ user.username }}</strong></td>
+          <td>{% if user.is_active %}<span class="badge badge-active">Active</span>{% else %}<span class="badge badge-inactive">Inactive</span>{% endif %}</td>
+          <td><code class="uuid">{{ user.uuid }}</code></td>
+          <td>{{ format_date(user.expires_at) }}</td>
+          <td><button class="btn-sm copy-btn" data-copy="{{ vmess_link(user.username, user.uuid, user.sni) }}">Copy</button></td>
+          <td class="actions">
+            {% if user.is_active %}
+            <form method="post" action="{{ url_for('users.disable_vmess') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-warn" onclick="return confirm('Disable {{ user.username }}?')">Disable</button></form>
+            {% else %}
+            <form method="post" action="{{ url_for('users.enable_vmess') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm">Enable</button></form>
+            {% endif %}
+            <form method="post" action="{{ url_for('users.delete_vmess') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-danger" onclick="return confirm('Delete {{ user.username }}?')">Delete</button></form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty">No VMess users yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel-card table-card">
+  <div class="section-head"><div><span class="eyebrow">Accounts</span><h2>VLESS Users</h2></div></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Username</th><th>Status</th><th>UUID</th><th>Expires</th><th>Link</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for user in vless_users %}
+        <tr>
+          <td><strong>{{ user.username }}</strong></td>
+          <td>{% if user.is_active %}<span class="badge badge-active">Active</span>{% else %}<span class="badge badge-inactive">Inactive</span>{% endif %}</td>
+          <td><code class="uuid">{{ user.uuid }}</code></td>
+          <td>{{ format_date(user.expires_at) }}</td>
+          <td><button class="btn-sm copy-btn" data-copy="{{ vless_link(user.username, user.uuid, user.sni) }}">Copy</button></td>
+          <td class="actions">
+            {% if user.is_active %}
+            <form method="post" action="{{ url_for('users.disable_vless') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-warn" onclick="return confirm('Disable {{ user.username }}?')">Disable</button></form>
+            {% else %}
+            <form method="post" action="{{ url_for('users.enable_vless') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm">Enable</button></form>
+            {% endif %}
+            <form method="post" action="{{ url_for('users.delete_vless') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-danger" onclick="return confirm('Delete {{ user.username }}?')">Delete</button></form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty">No VLESS users yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Monitoring — Telecom Manager{% endblock %}
+{% block page_heading %}Server Monitoring{% endblock %}
+{% block body_content %}
+{% set charts = {'CPU': samples|map(attribute='cpu_pct')|list, 'Memory': samples|map(attribute='mem_pct')|list, 'Disk': samples|map(attribute='disk_pct')|list} %}
+<section class="content-grid">
+{% for label, values in charts.items() %}
+  <article class="panel-card">
+    <div class="section-head">
+      <div><span class="eyebrow">Last 24 hours</span><h2>{{ label }}</h2></div>
+      {% if values %}<span class="badge badge-neutral">{{ values|last }}%</span>{% endif %}
+    </div>
+    {% if values %}
+    <p class="muted">Average {{ (values|sum / values|length)|round(1) }}% · Max {{ values|max }}%</p>
+    <div class="chart-wrap">
+      {% for v in values %}<div class="chart-bar {% if v > 80 %}bar-danger{% elif v > 50 %}bar-warn{% else %}bar-ok{% endif %}" style="height:{{ v|round }}px" title="{{ v }}%"></div>{% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state">No data collected yet. Data appears after the first maintenance run.</p>
+    {% endif %}
+  </article>
+{% endfor %}
+</section>
+{% endblock %}

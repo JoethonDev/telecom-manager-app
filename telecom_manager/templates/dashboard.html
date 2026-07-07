@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Telecom Manager{% endblock %}
+{% block page_heading %}Dashboard{% endblock %}
+{% block body_content %}
+<section class="hero-panel">
+  <div>
+    <span class="soft-badge">Live system</span>
+    <h2>Manage SSH TLS, VMess TCP TLS, and VLESS TCP TLS Vision access from one place.</h2>
+    <p>Use this panel to create accounts, review activity, restart gateway services, and copy ready-to-use connection data.</p>
+  </div>
+  <form method="post" action="{{ url_for('dashboard.restart_services') }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-primary">Restart gateway services</button>
+  </form>
+</section>
+
+<section class="metric-grid">
+  <article class="metric-card">
+    <span class="metric-label">SSH Users</span>
+    <strong>{{ active_ssh + expired_ssh }}</strong>
+    <small>{{ active_ssh }} active · {{ expired_ssh }} inactive</small>
+  </article>
+  <article class="metric-card">
+    <span class="metric-label">VMess Users</span>
+    <strong>{{ active_vmess + expired_vmess }}</strong>
+    <small>{{ active_vmess }} active · {{ expired_vmess }} inactive</small>
+  </article>
+  <article class="metric-card">
+    <span class="metric-label">VLESS Users</span>
+    <strong>{{ active_vless + expired_vless }}</strong>
+    <small>{{ active_vless }} active · {{ expired_vless }} inactive</small>
+  </article>
+  <article class="metric-card">
+    <span class="metric-label">Today's Events</span>
+    <strong>{{ today_usage }}</strong>
+    <small><a href="{{ url_for('usage') }}">Open activity log</a></small>
+    {% if hourly %}
+    <div class="sparkline" aria-label="Hourly activity sparkline">{% for h in hourly %}<span style="height:{{ (h / (hourly|max) * 42)|round }}px"></span>{% endfor %}</div>
+    {% endif %}
+  </article>
+</section>
+
+<section class="content-grid two-col">
+  <article class="panel-card">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Quick action</span>
+        <h2>Managed accounts</h2>
+      </div>
+      <a class="btn btn-secondary" href="{{ url_for('users') }}">Open Users</a>
+    </div>
+    <p class="muted">Create disposable SSH, VMess, and VLESS users with automatic expiry and safe disable/delete actions.</p>
+  </article>
+  <article class="panel-card">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Connection</span>
+        <h2>Gateway information</h2>
+      </div>
+    </div>
+    <div class="info-list">
+      <div><span>SSH TLS</span><code>{{ domain or public_ip }}:{{ stunnel_port }}</code></div>
+      <div><span>VMess TCP TLS</span><code>{{ domain or public_ip }}:{{ vmess_port }}</code></div>
+      <div><span>VLESS TCP TLS Vision</span><code>{{ domain or public_ip }}:{{ vless_port }}</code></div>
+    </div>
+  </article>
+</section>
+{% endblock %}

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Telecom Manager{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body class="{% if session.user_id %}is-authenticated{% else %}is-login{% endif %}">
+  {% if session.user_id %}
+  <button class="mobile-menu-btn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-block">
+        <a class="brand" href="{{ url_for('dashboard') }}" aria-label="Telecom Manager dashboard">
+          <span class="brand-mark">TM</span>
+          <span>
+            <strong>Telecom</strong>
+            <small>Manager Panel</small>
+          </span>
+        </a>
+      </div>
+      <nav class="side-nav" aria-label="Main navigation">
+        <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}aria-current="page"{% endif %}><span>Overview</span></a>
+        <a href="{{ url_for('users') }}" {% if request.endpoint in ['users'] %}aria-current="page"{% endif %}><span>Users</span></a>
+        <a href="{{ url_for('usage') }}" {% if request.endpoint == 'usage' %}aria-current="page"{% endif %}><span>Activity</span></a>
+        <a href="{{ url_for('monitoring') }}" {% if request.endpoint == 'monitoring' %}aria-current="page"{% endif %}><span>Monitoring</span></a>
+        <a href="{{ url_for('admins') }}" {% if request.endpoint == 'admins' %}aria-current="page"{% endif %}><span>Admins</span></a>
+        <a href="{{ url_for('backups') }}" {% if request.endpoint == 'backups' %}aria-current="page"{% endif %}><span>Backups</span></a>
+        <a href="{{ url_for('settings') }}" {% if request.endpoint == 'settings' %}aria-current="page"{% endif %}><span>Settings</span></a>
+        <a href="{{ url_for('monitoring.diagnostics') }}" {% if request.endpoint == 'monitoring.diagnostics' %}aria-current="page"{% endif %}><span>Diagnostics</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-chip">
+          <span class="avatar">{{ session.username[:1]|upper }}</span>
+          <div>
+            <strong>{{ session.username }}</strong>
+            <small>Administrator</small>
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-ghost btn-block">Logout</button>
+        </form>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Secure access control</p>
+          <h1 class="topbar-title">{% block page_heading %}Telecom Manager{% endblock %}</h1>
+        </div>
+        <div class="status-pill"><span></span> Local panel</div>
+      </header>
+      <section class="flash-stack" aria-live="polite">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      </section>
+      {{ self.body_content() }}
+    </main>
+  </div>
+  {% else %}
+  <main class="auth-page">
+    <section class="auth-card">
+      <div class="auth-brand">
+        <span class="brand-mark">TM</span>
+        <div>
+          <strong>Telecom Manager</strong>
+          <small>Private VPS access panel</small>
+        </div>
+      </div>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      {{ self.body_content() }}
+    </section>
+  </main>
+  {% endif %}
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+{% block body_content %}{% endblock %}
+</body>
+</html>

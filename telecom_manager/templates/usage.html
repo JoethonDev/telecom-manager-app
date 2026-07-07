@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Usage — Telecom Manager{% endblock %}
+{% block page_heading %}Connection Activity{% endblock %}
+{% block body_content %}
+<section class="metric-grid">
+  <article class="metric-card compact"><span class="metric-label">Today</span><strong>{{ daily|sum(attribute='cnt') }}</strong><small>total events</small></article>
+  {% for d in daily %}<article class="metric-card compact"><span class="metric-label">{{ d.type }}</span><strong>{{ d.cnt }}</strong><small>today</small></article>{% endfor %}
+</section>
+<section class="panel-card table-card">
+  <div class="section-head"><div><span class="eyebrow">Recent events</span><h2>Activity log</h2></div><a href="{{ url_for('usage.usage_export') }}" class="btn btn-secondary">Export CSV</a></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Time</th><th>User</th><th>Type</th></tr></thead>
+      <tbody>
+      {% for row in logs %}
+        <tr><td>{{ format_date(row.logged_at) }}</td><td><strong>{{ row.username }}</strong></td><td><span class="badge badge-active">{{ row.type }}</span></td></tr>
+      {% else %}
+        <tr><td colspan="3" class="empty">No connection activity yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

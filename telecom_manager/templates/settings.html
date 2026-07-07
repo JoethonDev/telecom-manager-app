@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Settings — Telecom Manager{% endblock %}
+{% block page_heading %}Settings{% endblock %}
+{% block body_content %}
+<section class="panel-card narrow-card">
+  <div class="section-head"><div><span class="eyebrow">Connection metadata</span><h2>Public connection values</h2></div></div>
+  <form method="post" class="form-stack wide-form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>Connection domain <input name="connection_domain" value="{{ settings.connection_domain }}" placeholder="vpn.example.com"></label>
+    <label>Public IP <input name="public_ip" value="{{ settings.public_ip }}" placeholder="203.0.113.10"></label>
+    <button type="submit" class="btn btn-primary">Save settings</button>
+  </form>
+</section>
+<section class="notice-card">
+  <strong>Install-time values</strong>
+  <p>Ports, SNI, and timezone are fixed at install time to avoid half-applied service configuration. The panel listens only on localhost; open it through an SSH tunnel.</p>
+</section>
+{% endblock %}
