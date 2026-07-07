@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Telecom Manager{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v=2">
 </head>
 <body class="{% if session.user_id %}is-authenticated{% else %}is-login{% endif %}">
   {% if session.user_id %}
@@ -87,5 +87,6 @@
   </main>
   {% endif %}
   <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <div id="modal-root" aria-live="polite"></div>
 </body>
 </html>

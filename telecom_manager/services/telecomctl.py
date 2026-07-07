@@ -49,7 +49,8 @@ def _mock_run(cmd_args):
     if "ssh add-user" in cmd or "ssh enable-user" in cmd or "ssh disable-user" in cmd or "ssh delete-user" in cmd:
         return MockResult("ok")
     if "ssh list-users" in cmd:
-        return MockResult("")
+        # Mock: one active SSH user that doesn't exist in dev DB to demo the sync
+        return MockResult('{"username":"legacy_user","is_active":1,"expires_at":0}')
     if "xray add" in cmd or "xray remove" in cmd or "xray enable" in cmd or "xray disable" in cmd:
         return MockResult("ok")
     if "port set" in cmd:
@@ -108,6 +109,34 @@ def xray_list_users():
             users.append(json.loads(line))
         except json.JSONDecodeError:
             pass
+    return users
+
+
+def ssh_list_users():
+    """Return list of dicts for SSH users managed by telecomctl.
+    Expected telecomctl output: one JSON object per line with keys
+    username, is_active, expires_at."""
+    result = _run(["ssh", "list-users"])
+    if result.returncode != 0:
+        return []
+    users = []
+    for line in result.stdout.strip().splitlines():
+        if not line.strip():
+            continue
+        try:
+            users.append(json.loads(line))
+        except json.JSONDecodeError:
+            # fallback: colon-delimited "username:is_active:expires_at"
+            parts = line.strip().split(":")
+            if len(parts) >= 2:
+                try:
+                    users.append({
+                        "username": parts[0],
+                        "is_active": int(parts[1]),
+                        "expires_at": int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0,
+                    })
+                except (ValueError, IndexError):
+                    pass
     return users
 
 

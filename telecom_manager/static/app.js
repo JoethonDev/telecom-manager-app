@@ -211,6 +211,174 @@ document.addEventListener('DOMContentLoaded',function(){
     });
   }
 
+  /* ---------- modal confirm/alert + toast ---------- */
+  var modalRoot = document.getElementById('modal-root');
+  var toastHost = null;
+  function ensureToastHost(){
+    if(toastHost && toastHost.isConnected) return toastHost;
+    toastHost = document.createElement('div');
+    toastHost.className = 'toast-stack';
+    document.body.appendChild(toastHost);
+    return toastHost;
+  }
+
+  function svgIcon(name){
+    if(name === 'danger') return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    if(name === 'warn')   return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    if(name === 'ok')     return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+  }
+
+  function buildModal(opts){
+    var kind = opts.kind || (opts.danger ? 'danger' : 'info');
+    var tone = (kind === 'danger' || kind === 'warn') ? kind : (kind === 'ok' ? 'ok' : 'info');
+    var backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.setAttribute('role', 'dialog');
+    backdrop.setAttribute('aria-modal', 'true');
+    backdrop.innerHTML =
+      '<div class="modal-card">' +
+        '<button type="button" class="modal-close-x" aria-label="Close" data-modal-close>\u00d7</button>' +
+        '<div class="modal-head">' +
+          '<div class="modal-icon ' + tone + '">' + svgIcon(tone === 'ok' ? 'ok' : tone) + '</div>' +
+          '<div class="modal-title">' + escapeHtml(opts.title || '') + '</div>' +
+        '</div>' +
+        '<div class="modal-body">' + (opts.html || escapeHtml(opts.message || '')) + '</div>' +
+        (opts.confirmText === false ? '' :
+          '<div class="modal-foot">' +
+            '<button type="button" class="btn btn-secondary" data-modal-cancel>' + escapeHtml(opts.cancelText || 'Cancel') + '</button>' +
+            '<button type="button" class="btn ' + (opts.danger ? 'btn-danger' : 'btn-primary') + '" data-modal-confirm>' + escapeHtml(opts.confirmText || 'Confirm') + '</button>' +
+          '</div>'
+        ) +
+      '</div>';
+    return backdrop;
+  }
+
+  function openModal(opts){
+    return new Promise(function(resolve){
+      var backdrop = buildModal(opts);
+      modalRoot.appendChild(backdrop);
+      var confirmBtn = backdrop.querySelector('[data-modal-confirm]');
+      var cancelBtn  = backdrop.querySelector('[data-modal-cancel]');
+      var closeBtn   = backdrop.querySelector('[data-modal-close]');
+      // focus confirm
+      setTimeout(function(){ (confirmBtn || closeBtn).focus(); }, 30);
+
+      function done(value){
+        if(backdrop.classList.contains('is-leaving')) return;
+        backdrop.classList.add('is-leaving');
+        setTimeout(function(){ if(backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); resolve(value); }, 200);
+      }
+      if(confirmBtn) confirmBtn.addEventListener('click', function(){ done(true); });
+      if(cancelBtn)  cancelBtn.addEventListener('click',  function(){ done(false); });
+      if(closeBtn)   closeBtn.addEventListener('click',   function(){ done(false); });
+      backdrop.addEventListener('click', function(e){ if(e.target === backdrop) done(false); });
+      document.addEventListener('keydown', function onKey(e){
+        if(backdrop.classList.contains('is-leaving')){ document.removeEventListener('keydown', onKey); return; }
+        if(e.key === 'Escape'){ done(false); }
+        if(e.key === 'Enter' && confirmBtn && document.activeElement !== cancelBtn){ done(true); }
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // public API
+  window.modalConfirm = function(opts){
+    opts = opts || {};
+    if(typeof opts === 'string') opts = { message: opts };
+    return openModal({
+      title: opts.title || 'Are you sure?',
+      message: opts.message,
+      html: opts.html,
+      confirmText: opts.confirmText || 'Confirm',
+      cancelText:  opts.cancelText  || 'Cancel',
+      danger: !!opts.danger,
+    });
+  };
+  window.modalAlert = function(opts){
+    opts = opts || {};
+    if(typeof opts === 'string') opts = { message: opts };
+    return openModal({
+      title: opts.title || 'Notice',
+      message: opts.message,
+      kind: opts.kind || 'info',
+      confirmText: 'OK',
+      cancelText: false,
+    });
+  };
+  window.toast = function(opts){
+    opts = opts || {};
+    if(typeof opts === 'string') opts = { message: opts };
+    var host = ensureToastHost();
+    var t = document.createElement('div');
+    var kind = opts.kind || 'info';
+    t.className = 'toast ' + kind;
+    t.innerHTML =
+      '<span class="toast-dot" aria-hidden="true"></span>' +
+      '<div class="toast-body">' + escapeHtml(opts.message || '') + '</div>' +
+      '<button type="button" class="toast-close" aria-label="Dismiss">\u00d7</button>';
+    host.appendChild(t);
+    function kill(){
+      if(t.classList.contains('is-leaving')) return;
+      t.classList.add('is-leaving');
+      setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 220);
+    }
+    t.querySelector('.toast-close').addEventListener('click', kill);
+    var dur = opts.duration == null ? 4000 : opts.duration;
+    if(dur > 0) setTimeout(kill, dur);
+  };
+
+  /* ---------- intercept data-confirm on form submit ---------- */
+  document.addEventListener('submit', function(e){
+    var form = e.target;
+    if(form.tagName !== 'FORM') return;
+    var btn = form.querySelector('[data-confirm]') || (form.dataset && form.dataset.confirm ? form : null);
+    if(!btn) return;
+    var msg, title, danger = false, confirmText, cancelText;
+    if(btn === form){
+      msg = form.dataset.confirm;
+      danger = form.dataset.confirmDanger === 'true';
+    } else {
+      msg = btn.getAttribute('data-confirm');
+      danger = btn.getAttribute('data-confirm-danger') === 'true';
+    }
+    if(!msg) return;
+    e.preventDefault();
+    modalConfirm({ title: title, message: msg, danger: danger, confirmText: confirmText, cancelText: cancelText })
+      .then(function(ok){
+        if(!ok) return;
+        // disable to prevent double-submit, then submit
+        if(btn && btn.tagName === 'BUTTON') btn.disabled = true;
+        form.submit();
+      });
+  }, true);
+  // also intercept plain button[data-confirm] outside forms (e.g., trigger a fetch)
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-confirm]');
+    if(!btn) return;
+    if(btn.tagName === 'BUTTON' && btn.type === 'submit') return; // handled by submit listener
+    if(btn.closest('form')) return;                                // form submit handler covers it
+    var msg = btn.getAttribute('data-confirm');
+    if(!msg) return;
+    e.preventDefault();
+    modalConfirm({
+      message: msg,
+      danger: btn.getAttribute('data-confirm-danger') === 'true',
+      confirmText: btn.getAttribute('data-confirm-text'),
+    }).then(function(ok){
+      if(!ok) return;
+      btn.disabled = true;
+      // If it has data-href, navigate; if it's a link, follow it
+      var href = btn.getAttribute('data-href') || btn.getAttribute('href');
+      if(href) window.location.href = href;
+    });
+  }, true);
+
   /* ---------- login: show/hide password + submit spinner ---------- */
   document.querySelectorAll('.pw-toggle[data-target]').forEach(function(btn){
     btn.addEventListener('click', function(){
@@ -252,6 +420,7 @@ document.addEventListener('DOMContentLoaded',function(){
   var liveRoot = document.querySelector('[data-live="monitoring"]');
   if(liveRoot){
     startLive(liveRoot, 30000);
+    startLiveTick(liveRoot, 5000);
   }
 
   function startLive(root, interval){
@@ -317,6 +486,45 @@ document.addEventListener('DOMContentLoaded',function(){
         void card.offsetWidth;
         card.classList.add('is-updated');
       }
+    });
+  }
+
+  /* ---------- real-time tick (reads /proc directly) ---------- */
+  function startLiveTick(root, interval){
+    var timer = null;
+    var inflight = false;
+    function tick(){
+      if(inflight) return;
+      inflight = true;
+      fetch('/monitoring/live.json', {credentials:'same-origin', cache:'no-store'})
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(d){ if(d) applyTick(root, d); })
+        .catch(function(){})
+        .then(function(){ inflight = false; });
+    }
+    function onVis(){
+      if(document.hidden){ stop(); return; }
+      tick();
+      timer = setInterval(tick, interval);
+    }
+    function stop(){ if(timer){ clearInterval(timer); timer = null; } }
+    document.addEventListener('visibilitychange', onVis);
+    timer = setInterval(tick, interval);
+  }
+
+  function applyTick(root, d){
+    root.querySelectorAll('.stat-card').forEach(function(card){
+      var key = card.getAttribute('data-key');
+      var v = d[key];
+      if(v == null) return;
+      var num = card.querySelector('.count');
+      if(num){
+        // short, no easing — feel instantaneous
+        num.textContent = String(Math.round(v));
+        num.setAttribute('data-current', v);
+        num.setAttribute('data-target', v);
+      }
+      updateGauge(card, v);
     });
   }
 

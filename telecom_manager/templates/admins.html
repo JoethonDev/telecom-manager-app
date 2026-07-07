@@ -26,7 +26,7 @@
             <td>{{ format_date(admin.created_at) }}</td>
             <td>
               {% if admin.id != session.user_id %}
-              <form method="post" action="{{ url_for('admins.admins') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete"><input type="hidden" name="admin_id" value="{{ admin.id }}"><button type="submit" class="btn-sm btn-danger" onclick="return confirm('Delete admin {{ admin.username }}?')">Delete</button></form>
+              <form method="post" action="{{ url_for('admins.admins') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete"><input type="hidden" name="admin_id" value="{{ admin.id }}"><button type="submit" class="btn-sm btn-danger" data-confirm="Delete admin &quot;{{ admin.username }}&quot; permanently? They will no longer be able to sign in." data-confirm-danger="true" data-confirm-text="Delete">Delete</button></form>
               {% endif %}
             </td>
           </tr>

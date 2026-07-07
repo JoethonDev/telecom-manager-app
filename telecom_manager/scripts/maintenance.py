@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Maintenance script — runs periodically via systemd timer."""
+"""Maintenance script.
+
+Two modes:
+  one-shot (default): runs every task once and exits.  Schedule it from
+    systemd timer / cron at MAINTENANCE_INTERVAL_MINUTES (default 10).
+  daemon (--loop):    runs every task in a continuous loop, sleeping
+    MAINTENANCE_INTERVAL_MINUTES between cycles.  Run as a systemd service
+    instead of a timer when you don't want to manage the timer unit.
+"""
 import os
 import sys
 import time
@@ -16,12 +24,18 @@ os.environ.setdefault("FLASK_SECRET", "maintenance")
 
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger("maintenance")
 
 from telecom_manager.app import init_db
 from telecom_manager.db import get_conn, now_ts, get_setting, set_setting, MANAGER_DB
 from telecom_manager.services import telecomctl
+from telecom_manager.config import MAINTENANCE_INTERVAL_MINUTES
 
 init_db()
+
+INTERVAL_MIN = max(1, MAINTENANCE_INTERVAL_MINUTES)
+INTERVAL_SEC = INTERVAL_MIN * 60
+log.info("Maintenance interval: %d minute(s)", INTERVAL_MIN)
 
 
 def expire_users():
@@ -212,10 +226,34 @@ def reconcile_users():
 
 
 if __name__ == "__main__":
-    expire_users()
-    collect_usage_logs()
-    collect_xray_logs()
-    collect_monitoring_samples()
-    collect_bandwidth()
-    backup_database()
-    reconcile_users()
+    tasks = [
+        expire_users,
+        collect_usage_logs,
+        collect_xray_logs,
+        collect_monitoring_samples,
+        collect_bandwidth,
+        backup_database,
+        reconcile_users,
+    ]
+
+    def run_once():
+        for t in tasks:
+            try:
+                t()
+            except Exception:
+                log.exception("Task %s failed", t.__name__)
+
+    if "--loop" in sys.argv:
+        log.info("Daemon mode: running every %d min. Ctrl-C to stop.", INTERVAL_MIN)
+        try:
+            while True:
+                started = time.time()
+                run_once()
+                elapsed = time.time() - started
+                sleep_for = max(5, INTERVAL_SEC - elapsed)
+                log.info("Cycle took %.1fs, sleeping %.1fs", elapsed, sleep_for)
+                time.sleep(sleep_for)
+        except KeyboardInterrupt:
+            log.info("Stopped.")
+    else:
+        run_once()

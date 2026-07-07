@@ -39,11 +39,22 @@
   </article>
 </section>
 
+<section class="panel-card">
+  <div class="section-head">
+    <div><span class="eyebrow">Reconcile</span><h2>Sync from system</h2></div>
+    <form method="post" action="{{ url_for('users.sync_users') }}" class="inline-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-secondary" data-confirm="Import any SSH and Xray users found on the system but missing from the database? Existing rows are not modified.">Sync users from system</button>
+    </form>
+  </div>
+  <p class="muted">Reads <code>telecomctl ssh list-users</code> and <code>telecomctl xray list-users</code> and adds any account that exists on the host but is not tracked here. Existing rows are left untouched.</p>
+</section>
+
 <section class="panel-card table-card" data-enhance data-filter-col="1" data-filter-values="all:All|active:Active|inactive:Inactive" data-page-size="10">
   <div class="section-head"><div><span class="eyebrow">Accounts</span><h2>SSH Users</h2></div></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Username</th><th>Status</th><th>Expires</th><th>Connection</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Username</th><th>Status</th><th>Expires</th><th>Connection</th><th class="th-actions">Actions</th></tr></thead>
       <tbody>
       {% for user in ssh_users %}
         <tr>
@@ -53,11 +64,11 @@
           <td class="conn-data"><code>{{ domain }}:{{ stunnel_port }}</code> <button class="btn-sm copy-btn" data-copy="{{ domain }}:{{ stunnel_port }}@{{ user.username }}">Copy</button></td>
           <td class="actions">
             {% if user.is_active %}
-            <form method="post" action="{{ url_for('users.disable_ssh') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-warn" onclick="return confirm('Disable {{ user.username }}?')">Disable</button></form>
+            <form method="post" action="{{ url_for('users.disable_ssh') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-warn" data-confirm="Disable SSH user &quot;{{ user.username }}&quot;? They will not be able to connect until re-enabled.">Disable</button></form>
             {% else %}
             <form method="post" action="{{ url_for('users.enable_ssh') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm">Enable</button></form>
             {% endif %}
-            <form method="post" action="{{ url_for('users.delete_ssh') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-danger" onclick="return confirm('Delete {{ user.username }}?')">Delete</button></form>
+            <form method="post" action="{{ url_for('users.delete_ssh') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-danger" data-confirm="Delete SSH user &quot;{{ user.username }}&quot; permanently? This removes the Linux account too." data-confirm-danger="true" data-confirm-text="Delete">Delete</button></form>
           </td>
         </tr>
       {% else %}
@@ -72,7 +83,7 @@
   <div class="section-head"><div><span class="eyebrow">Accounts</span><h2>VMess Users</h2></div></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Username</th><th>Status</th><th>UUID</th><th>Expires</th><th>Link</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Username</th><th>Status</th><th>UUID</th><th>Expires</th><th>Link</th><th class="th-actions">Actions</th></tr></thead>
       <tbody>
       {% for user in vmess_users %}
         <tr>
@@ -83,11 +94,11 @@
           <td><button class="btn-sm copy-btn" data-copy="{{ vmess_link(user.username, user.uuid, user.sni) }}">Copy</button></td>
           <td class="actions">
             {% if user.is_active %}
-            <form method="post" action="{{ url_for('users.disable_vmess') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-warn" onclick="return confirm('Disable {{ user.username }}?')">Disable</button></form>
+            <form method="post" action="{{ url_for('users.disable_vmess') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-warn" data-confirm="Disable VMess user &quot;{{ user.username }}&quot;?">Disable</button></form>
             {% else %}
             <form method="post" action="{{ url_for('users.enable_vmess') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm">Enable</button></form>
             {% endif %}
-            <form method="post" action="{{ url_for('users.delete_vmess') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-danger" onclick="return confirm('Delete {{ user.username }}?')">Delete</button></form>
+            <form method="post" action="{{ url_for('users.delete_vmess') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-danger" data-confirm="Delete VMess user &quot;{{ user.username }}&quot; permanently? This removes the Xray client too." data-confirm-danger="true" data-confirm-text="Delete">Delete</button></form>
           </td>
         </tr>
       {% else %}
@@ -102,7 +113,7 @@
   <div class="section-head"><div><span class="eyebrow">Accounts</span><h2>VLESS Users</h2></div></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Username</th><th>Status</th><th>UUID</th><th>Expires</th><th>Link</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Username</th><th>Status</th><th>UUID</th><th>Expires</th><th>Link</th><th class="th-actions">Actions</th></tr></thead>
       <tbody>
       {% for user in vless_users %}
         <tr>
@@ -113,11 +124,11 @@
           <td><button class="btn-sm copy-btn" data-copy="{{ vless_link(user.username, user.uuid, user.sni) }}">Copy</button></td>
           <td class="actions">
             {% if user.is_active %}
-            <form method="post" action="{{ url_for('users.disable_vless') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-warn" onclick="return confirm('Disable {{ user.username }}?')">Disable</button></form>
+            <form method="post" action="{{ url_for('users.disable_vless') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-warn" data-confirm="Disable VLESS user &quot;{{ user.username }}&quot;?">Disable</button></form>
             {% else %}
             <form method="post" action="{{ url_for('users.enable_vless') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm">Enable</button></form>
             {% endif %}
-            <form method="post" action="{{ url_for('users.delete_vless') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-danger" onclick="return confirm('Delete {{ user.username }}?')">Delete</button></form>
+            <form method="post" action="{{ url_for('users.delete_vless') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="username" value="{{ user.username }}"><button type="submit" class="btn-sm btn-danger" data-confirm="Delete VLESS user &quot;{{ user.username }}&quot; permanently? This removes the Xray client too." data-confirm-danger="true" data-confirm-text="Delete">Delete</button></form>
           </td>
         </tr>
       {% else %}

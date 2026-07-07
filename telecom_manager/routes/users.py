@@ -40,6 +40,101 @@ def users():
     )
 
 
+@bp.route("/users/sync", methods=["POST"])
+@login_required
+def sync_users():
+    """Ingest SSH / Xray users that exist on the host but are not tracked in the DB."""
+    from ..services.telecomctl import ssh_list_users, xray_list_users
+
+    default_sni = get_default_sni()
+    # placeholder expiry: one year from now (admin can re-issue with proper validity)
+    one_year = int((datetime.now() + timedelta(days=365)).timestamp())
+    now = now_ts()
+
+    added_ssh = added_vmess = added_vless = 0
+    skipped_ssh = skipped_vmess = skipped_vless = 0
+    invalid_usernames = []
+
+    def safe_username(name):
+        try:
+            validate_username(name)
+            return name
+        except ValueError:
+            return None
+
+    with get_conn() as conn:
+        for u in ssh_list_users():
+            name = safe_username(u.get("username", ""))
+            if not name:
+                invalid_usernames.append(("ssh", u.get("username", "")))
+                continue
+            exists = conn.execute("SELECT 1 FROM ssh_users WHERE username = ?", (name,)).fetchone()
+            if exists:
+                skipped_ssh += 1
+                continue
+            expires = int(u.get("expires_at") or one_year)
+            if expires <= 0:
+                expires = one_year
+            is_active = 1 if int(u.get("is_active", 1)) else 0
+            conn.execute(
+                "INSERT INTO ssh_users (username, password_note, sni, expires_at, is_active, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (name, "imported from system", default_sni, expires, is_active, now, now),
+            )
+            added_ssh += 1
+
+        for u in xray_list_users():
+            name = safe_username(u.get("username", ""))
+            if not name:
+                invalid_usernames.append(("xray", u.get("username", "")))
+                continue
+            kind = (u.get("type") or u.get("protocol") or "").lower()
+            uuid_str = u.get("uuid") or ""
+            if not uuid_str:
+                # skip: nothing usable for xray
+                continue
+            sni = u.get("sni") or default_sni
+            expires = int(u.get("expires_at") or one_year)
+            if expires <= 0:
+                expires = one_year
+            is_active = 1 if int(u.get("is_active", 1)) else 0
+            if kind == "vmess":
+                if conn.execute("SELECT 1 FROM vmess_users WHERE username = ?", (name,)).fetchone():
+                    skipped_vmess += 1; continue
+                conn.execute(
+                    "INSERT INTO vmess_users (username, uuid, sni, expires_at, is_active, created_at, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (name, uuid_str, sni, expires, is_active, now, now),
+                )
+                added_vmess += 1
+            elif kind == "vless":
+                if conn.execute("SELECT 1 FROM vless_users WHERE username = ?", (name,)).fetchone():
+                    skipped_vless += 1; continue
+                conn.execute(
+                    "INSERT INTO vless_users (username, uuid, sni, expires_at, is_active, created_at, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (name, uuid_str, sni, expires, is_active, now, now),
+                )
+                added_vless += 1
+            else:
+                invalid_usernames.append(("xray", f"{name} (unknown type: {kind})"))
+
+    total = added_ssh + added_vmess + added_vless
+    skipped = skipped_ssh + skipped_vmess + skipped_vless
+    if total == 0 and skipped == 0 and not invalid_usernames:
+        flash("No system users found to import.", "info")
+    else:
+        flash(
+            f"Sync complete: {total} added "
+            f"({added_ssh} SSH, {added_vmess} VMess, {added_vless} VLESS), "
+            f"{skipped} already tracked.",
+            "success" if total else "info",
+        )
+        for kind, bad in invalid_usernames:
+            flash(f"Skipped invalid {kind} entry: {bad}", "error")
+    return redirect(url_for("users.users"))
+
+
 @bp.route("/ssh/add", methods=["POST"])
 @login_required
 def add_ssh():

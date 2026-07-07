@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, jsonify
 from ..auth import login_required
 from ..db import get_conn, now_ts
 from ..services import telecomctl
+from .. import system
 
 bp = Blueprint("monitoring", __name__)
 
@@ -49,6 +50,13 @@ def monitoring_data():
         user_bandwidth=[dict(u) for u in user_bandwidth],
         ts=now,
     )
+
+
+@bp.route("/monitoring/live.json")
+@login_required
+def monitoring_live():
+    """Real-time CPU/mem/disk read directly from /proc. Cheap; safe to poll."""
+    return jsonify(system.read_all())
 
 
 @bp.route("/diagnostics")

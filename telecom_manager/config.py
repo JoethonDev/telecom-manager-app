@@ -22,3 +22,7 @@ SSH_TARGET_PORT = os.environ.get("SSH_TARGET_PORT", "22")
 SSH_COMPAT_PORT = os.environ.get("SSH_COMPAT_PORT", "2222")
 
 TELECOMCTL_PATH = "/usr/local/sbin/telecomctl"
+
+# Maintenance sampling cadence (minutes). Real-time values still come from
+# /proc via /monitoring/live.json — this only controls DB history granularity.
+MAINTENANCE_INTERVAL_MINUTES = int(os.environ.get("MAINTENANCE_INTERVAL_MINUTES", "10"))
