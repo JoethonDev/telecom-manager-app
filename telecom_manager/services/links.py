@@ -48,6 +48,7 @@ def vless_link(username, uuid, sni):
         "sni": sni or cfg["default_sni"],
         "fp": "chrome",
         "allowInsecure": "1",
+        "packetEncoding": "xudp",
     }
     return f"vless://{uuid}@{conn_host}:{cfg['vless_port']}/?{urlencode(params)}#{quote(username)}"
 
